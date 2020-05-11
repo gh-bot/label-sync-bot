@@ -74,7 +74,7 @@ namespace Label.Synchronizer.Bot
 
         public int Limit = int.MaxValue;
 
-        public bool IgnorePrivate = true;
+        public bool IgnorePrivate = false;
 
         #endregion
     }
