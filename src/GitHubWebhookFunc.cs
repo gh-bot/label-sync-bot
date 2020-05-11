@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Queue;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -14,8 +13,7 @@ namespace Label.Synchronizer.Bot
         [FunctionName("webhook")]
         public static async Task<IActionResult> Run(
             [HttpTrigger("post", Route = null)] HttpRequest request, 
-            //[Queue("label-sync-bot-items", Connection = "StorageConnectionString")]CloudQueue outputQueue,
-            [Queue("label-sync-bot-items"), StorageAccount("AzureWebJobsStorage")] CloudQueue outputQueue,
+            [Queue("label-sync-bot-items"), StorageAccount("AzureWebJobsStorage")] ICollector<string> queue,
             ILogger log)
         {
             var debugging = log.IsEnabled(LogLevel.Debug);
@@ -24,24 +22,27 @@ namespace Label.Synchronizer.Bot
             var ghEvent = request.Headers.ValueOrDefault("X-GitHub-Event");
             if (!GitHubApi.LABEL.Equals(ghEvent))
             {
-                if (debugging) log.LogDebug($"IGNORED: X-GitHub-Event: '{ghEvent}'");
+                if (debugging) log.LogDebug($"IGNORED: X-GitHub-Event: '{ghEvent}'. X-GitHub-Delivery: {request.Headers.ValueOrDefault("X-GitHub-Delivery")} ");
                 return new OkResult();
             }
 
-            // Ignore events from bots
             var requestBody = await new StreamReader(request.Body).ReadToEndAsync();
+            if (log.IsEnabled(LogLevel.Trace))
+            {
+                if (log.IsEnabled(LogLevel.Trace)) log.LogTrace($"Request:\n {requestBody}");
+            }
+
+            // Ignore events from bots
             if (Regex.IsMatch(requestBody, "(\"type\")\\s*:\\s*(\"Bot\")"))
             {
-                if (debugging) log.LogDebug($"IGNORED: X-GitHub-Event: '{ghEvent}' from bot");
+                if (debugging) log.LogDebug($"IGNORED X-GitHub-Delivery: {request.Headers.ValueOrDefault("X-GitHub-Delivery")} from BOT");
                 return new OkResult();
             }
 
             // Add message to queue
-            var delivery = request.Headers.ValueOrDefault("X-GitHub-Delivery");
-            var message  = new CloudQueueMessage(delivery, null);
+            queue.Add(requestBody);
 
-            message.SetMessageContent(requestBody);
-            await outputQueue.AddMessageAsync(message);
+            var delivery = request.Headers.ValueOrDefault("X-GitHub-Delivery");
             log.LogInformation($"Queued '{delivery}' event for processing");
 
             // Report success

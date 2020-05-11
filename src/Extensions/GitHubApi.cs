@@ -153,10 +153,9 @@ namespace Label.Synchronizer.Bot
 
                 case System.Net.HttpStatusCode.NotFound:
                     return;
-
-                default:
-                    throw new Exception(response.ReasonPhrase);
             }
+
+            response.EnsureSuccessStatusCode();
         }
 
         #endregion

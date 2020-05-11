@@ -1,6 +1,5 @@
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -10,10 +9,11 @@ namespace Label.Synchronizer.Bot
     public static class GitHubWorkerFunc
     {
         [FunctionName("worker")]
-        public static async Task RunAsync([QueueTrigger("label-sync-bot-items"), StorageAccount("AzureWebJobsStorage")]CloudQueueMessage message, ILogger log)
+        public static async Task RunAsync([QueueTrigger("label-sync-bot-items"), StorageAccount("AzureWebJobsStorage")]string message, ILogger log)
         {
-            var payload = JObject.Parse(message.AsString)
+            var payload = JObject.Parse(message)
                                  .GetPayload();
+
             using var github = GitHubApi.GetGitHubClient();
 
             // Query Metadata
@@ -35,9 +35,6 @@ namespace Label.Synchronizer.Bot
                     await github.HandleLabelDeletedEvent(deleted, log);
                     return;
             };
-
-
-            log.LogInformation($"C# Queue trigger function processed: {message}");
         }
 
 
