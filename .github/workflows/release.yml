@@ -1,7 +1,7 @@
 name: Deploy DotNet project to Azure Function App
 
 on:
-  [push]
+  [release]
 
 jobs:
   build-and-deploy:
