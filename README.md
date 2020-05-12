@@ -1,3 +1,1 @@
 # Label Synchronizer Bot
-
-
