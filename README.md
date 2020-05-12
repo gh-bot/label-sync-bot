@@ -1,2 +1,3 @@
-# label-sync-bot
-label-sync-bot
+# Label Synchronizer Bot
+
+
